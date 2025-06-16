@@ -1,0 +1,26 @@
+[client]
+showErrorDetails = true
+
+[browser]
+gatherUsageStats = false
+
+[server]
+enableCORS = false
+enableXsrfProtection = false
+maxUploadSize = 200
+
+[logger]
+level = "info"
+
+[global]
+dataFrameSerialization = "arrow"
+
+[mapbox]
+token = ""
+
+[theme]
+base = "light"
+
+# Baris ini yang paling penting: menentukan versi Python
+[runtime]
+python_version = "3.11" # Atau "3.12" jika Anda mau, tapi 3.11 lebih stabil untuk banyak library saat ini.
