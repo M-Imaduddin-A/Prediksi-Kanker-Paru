@@ -1,0 +1,113 @@
+import streamlit as st
+import pandas as pd
+import joblib
+
+# --- 1. Memuat Model yang Sudah Disimpan ---
+try:
+    log_reg_model = joblib.load('logistic_regression_model.pkl')
+    rf_model = joblib.load('random_forest_model.pkl')
+    st.sidebar.success("Model berhasil dimuat!")
+except FileNotFoundError:
+    st.sidebar.error("Error: File model tidak ditemukan. Pastikan 'logistic_regression_model.pkl' dan 'random_forest_model.pkl' ada di direktori yang sama.")
+    st.stop() # Menghentikan aplikasi jika model tidak ditemukan
+
+# --- 2. Judul dan Deskripsi Aplikasi ---
+st.title("Prediksi Risiko Kanker Paru")
+st.write("""
+Aplikasi ini memprediksi risiko kanker paru berdasarkan gejala dan faktor risiko yang Anda masukkan.
+Ini adalah alat demonstrasi dan tidak boleh digunakan sebagai pengganti diagnosis medis profesional.
+""")
+
+# --- 3. Sidebar untuk Pemilihan Model ---
+st.sidebar.header("Pengaturan Model")
+selected_model = st.sidebar.selectbox(
+    "Pilih Model untuk Prediksi:",
+    ("Random Forest", "Regresi Logistik")
+)
+
+# --- 4. Input Pengguna ---
+st.header("Masukkan Informasi Anda:")
+
+# Input GENDER (0=M, 1=F)
+gender_input = st.radio("Jenis Kelamin", ("Laki-laki", "Perempuan"))
+gender_encoded = 0 if gender_input == "Laki-laki" else 1
+
+# Input AGE
+age_input = st.slider("Usia", min_value=1, max_value=100, value=40)
+
+# Fungsi untuk membuat input biner (1=Yes, 0=No)
+def binary_input(label):
+    option = st.radio(label, ("Ya", "Tidak"))
+    return 1 if option == "Ya" else 0
+
+st.subheader("Gejala dan Faktor Risiko:")
+# Inputs untuk fitur biner (pastikan sesuai urutan kolom saat training model)
+# Urutan kolom saat training: ['GENDER', 'AGE', 'SMOKING', 'YELLOW_FINGERS', 'ANXIETY', 'PEER_PRESSURE', 'CHRONIC DISEASE', 'FATIGUE ', 'ALLERGY ', 'WHEEZING', 'ALCOHOL CONSUMING', 'COUGHING', 'SHORTNESS OF BREATH', 'SWALLOWING DIFFICULTY', 'CHEST PAIN']
+# Perhatikan spasi di nama kolom 'FATIGUE ', 'ALLERGY '
+smoking = binary_input("Merokok?")
+yellow_fingers = binary_input("Jari Kuning?")
+anxiety = binary_input("Sering Cemas?")
+peer_pressure = binary_input("Tekanan Teman Sebaya?")
+chronic_disease = binary_input("Memiliki Penyakit Kronis?")
+fatigue = binary_input("Sering Merasa Lelah?")
+allergy = binary_input("Memiliki Alergi?")
+wheezing = binary_input("Mengalami Mengi (Wheezing)?")
+alcohol_consuming = binary_input("Mengonsumsi Alkohol?")
+coughing = binary_input("Sering Batuk?")
+shortness_of_breath = binary_input("Mengalami Sesak Napas?")
+swallowing_difficulty = binary_input("Kesulitan Menelan?")
+chest_pain = binary_input("Mengalami Nyeri Dada?")
+
+# --- 5. Mengumpulkan Input ke dalam DataFrame untuk Prediksi ---
+# Pastikan urutan dan nama kolom sama persis dengan X_train saat model dilatih!
+# Jika Anda mengubah nama kolom atau urutan, sesuaikan di sini.
+input_data = pd.DataFrame([[
+    gender_encoded,
+    age_input,
+    smoking,
+    yellow_fingers,
+    anxiety,
+    peer_pressure,
+    chronic_disease,
+    fatigue,
+    allergy,
+    wheezing,
+    alcohol_consuming,
+    coughing,
+    shortness_of_breath,
+    swallowing_difficulty,
+    chest_pain
+]], columns=[
+    'GENDER', 'AGE', 'SMOKING', 'YELLOW_FINGERS', 'ANXIETY', 'PEER_PRESSURE',
+    'CHRONIC DISEASE', 'FATIGUE ', 'ALLERGY ', 'WHEEZING',
+    'ALCOHOL CONSUMING', 'COUGHING', 'SHORTNESS OF BREATH',
+    'SWALLOWING DIFFICULTY', 'CHEST PAIN'
+])
+
+# --- 6. Membuat Prediksi ---
+st.subheader("Hasil Prediksi:")
+
+if st.button("Prediksi Risiko Kanker Paru"):
+    model_to_use = None
+    if selected_model == "Random Forest":
+        model_to_use = rf_model
+    elif selected_model == "Regresi Logistik":
+        model_to_use = log_reg_model
+
+    if model_to_use:
+        prediction = model_to_use.predict(input_data)[0]
+        prediction_proba = model_to_use.predict_proba(input_data)[0]
+
+        st.write(f"Model yang digunakan: **{selected_model}**")
+
+        if prediction == 1:
+            st.error("### Risiko Kanker Paru: YA")
+            st.write(f"Berdasarkan input Anda, model memprediksi **kemungkinan tinggi** kanker paru.")
+        else:
+            st.success("### Risiko Kanker Paru: TIDAK")
+            st.write(f"Berdasarkan input Anda, model memprediksi **kemungkinan rendah** kanker paru.")
+
+        st.write(f"Probabilitas Prediksi (No Cancer / Cancer): **{prediction_proba[0]:.2f} / {prediction_proba[1]:.2f}**")
+        st.info("Catatan: Ini adalah prediksi dari model. Selalu konsultasikan dengan profesional medis untuk diagnosis dan saran.")
+    else:
+        st.warning("Silakan pilih model untuk membuat prediksi.")
