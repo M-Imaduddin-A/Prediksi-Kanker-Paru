@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import joblib
+from PIL import Image
 
 # --- 1. Memuat Model yang Sudah Disimpan ---
 try:
@@ -111,3 +112,16 @@ if st.button("Prediksi Risiko Kanker Paru"):
         st.info("Catatan: Ini adalah prediksi dari model. Selalu konsultasikan dengan profesional medis untuk diagnosis dan saran.")
     else:
         st.warning("Silakan pilih model untuk membuat prediksi.")
+
+st.title("Perbandingan Performa Model Prediksi Kanker Paru")
+
+st.write("Berikut adalah perbandingan metrik performa antara Model Regresi Logistik dan Random Forest setelah proses tuning dan resampling.")
+
+# Tampilkan grafik dari file yang disimpan
+try:
+    img = Image.open('model_performance_comparison.png')
+    st.image(img, caption='Grafik Perbandingan Performa Model')
+except FileNotFoundError:
+    st.error("File grafik 'model_performance_comparison.png' tidak ditemukan. Pastikan sudah dibuat.")
+
+st.dataframe(df_performance.round(4)) # Jika Anda juga ingin menampilkan tabel
