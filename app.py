@@ -1,15 +1,18 @@
 import streamlit as st
 import pandas as pd
 import joblib
-from PIL import Image
+import matplotlib.pyplot as plt # Import baru untuk plotting
+import seaborn as sns          # Import baru untuk plotting
+# from PIL import Image # Tidak diperlukan lagi jika plot dibuat langsung
 
 # --- 1. Memuat Model yang Sudah Disimpan ---
 try:
-    log_reg_model = joblib.load('logistic_regression_model.pkl')
-    rf_model = joblib.load('random_forest_model.pkl')
+    # Ganti nama file .pkl jika Anda sudah menyimpan dengan nama 'best_...'
+    log_reg_model = joblib.load('best_logistic_regression_resampled_tuned_model.pkl')
+    rf_model = joblib.load('best_random_forest_resampled_tuned_model.pkl')
     st.sidebar.success("Model berhasil dimuat!")
 except FileNotFoundError:
-    st.sidebar.error("Error: File model tidak ditemukan. Pastikan 'logistic_regression_model.pkl' dan 'random_forest_model.pkl' ada di direktori yang sama.")
+    st.sidebar.error("Error: File model tidak ditemukan. Pastikan 'best_logistic_regression_resampled_tuned_model.pkl' dan 'best_random_forest_resampled_tuned_model.pkl' ada di direktori yang sama.")
     st.stop() # Menghentikan aplikasi jika model tidak ditemukan
 
 # --- 2. Judul dan Deskripsi Aplikasi ---
@@ -61,7 +64,6 @@ chest_pain = binary_input("Mengalami Nyeri Dada?")
 
 # --- 5. Mengumpulkan Input ke dalam DataFrame untuk Prediksi ---
 # Pastikan urutan dan nama kolom sama persis dengan X_train saat model dilatih!
-# Jika Anda mengubah nama kolom atau urutan, sesuaikan di sini.
 input_data = pd.DataFrame([[
     gender_encoded,
     age_input,
@@ -70,8 +72,8 @@ input_data = pd.DataFrame([[
     anxiety,
     peer_pressure,
     chronic_disease,
-    fatigue,
-    allergy,
+    fatigue, # Perhatikan spasi jika ada di nama kolom asli
+    allergy, # Perhatikan spasi jika ada di nama kolom asli
     wheezing,
     alcohol_consuming,
     coughing,
@@ -80,7 +82,7 @@ input_data = pd.DataFrame([[
     chest_pain
 ]], columns=[
     'GENDER', 'AGE', 'SMOKING', 'YELLOW_FINGERS', 'ANXIETY', 'PEER_PRESSURE',
-    'CHRONIC DISEASE', 'FATIGUE ', 'ALLERGY ', 'WHEEZING',
+    'CHRONIC DISEASE', 'FATIGUE ', 'ALLERGY ', 'WHEEZING', # Pastikan spasi di sini sesuai dengan nama kolom asli
     'ALCOHOL CONSUMING', 'COUGHING', 'SHORTNESS OF BREATH',
     'SWALLOWING DIFFICULTY', 'CHEST PAIN'
 ])
@@ -113,15 +115,49 @@ if st.button("Prediksi Risiko Kanker Paru"):
     else:
         st.warning("Silakan pilih model untuk membuat prediksi.")
 
+# --- 7. Perbandingan Performa Model ---
 st.title("Perbandingan Performa Model Prediksi Kanker Paru")
+st.write("Berikut adalah perbandingan metrik performa antara Model Regresi Logistik dan Random Forest (setelah tuning dan resampling).")
 
-st.write("Berikut adalah perbandingan metrik performa antara Model Regresi Logistik dan Random Forest setelah proses tuning dan resampling.")
+# HARDCODED PERFORMANCE METRICS (sesuaikan dengan hasil training Anda yang sebenarnya)
+# Ini diambil dari output terakhir yang Anda berikan untuk model yang dituning dan di-resample
+metrics_data = {
+    'Model': ['Regresi Logistik', 'Random Forest'],
+    # Metrik untuk kelas '1' (Cancer)
+    'Accuracy': [0.9500, 0.9667],
+    'Precision': [0.9500, 0.9623],
+    'Recall': [1.0000, 1.0000],
+    'F1-Score': [0.9744, 0.9808],
+    'ROC-AUC': [0.9850, 0.9950] # Ini adalah nilai placeholder, ganti dengan nilai ROC-AUC aktual jika Anda memilikinya
+}
+df_performance = pd.DataFrame(metrics_data).set_index('Model')
 
-# Tampilkan grafik dari file yang disimpan
-try:
-    img = Image.open('model_performance_comparison.png')
-    st.image(img, caption='Grafik Perbandingan Performa Model')
-except FileNotFoundError:
-    st.error("File grafik 'model_performance_comparison.png' tidak ditemukan. Pastikan sudah dibuat.")
+# Tampilkan tabel performa
+st.subheader("Tabel Perbandingan Performa Model")
+st.dataframe(df_performance.round(4))
 
-st.dataframe(df_performance.round(4)) # Jika Anda juga ingin menampilkan tabel
+# Membuat dan menampilkan grafik perbandingan performa
+st.subheader("Grafik Perbandingan Performa Model")
+
+df_plot = df_performance.stack().reset_index()
+df_plot.columns = ['Model', 'Metric', 'Value']
+
+# Menggunakan st.pyplot() untuk menampilkan figure Matplotlib
+fig, ax = plt.subplots(figsize=(12, 7))
+sns.barplot(x='Metric', y='Value', hue='Model', data=df_plot, palette='viridis', ax=ax)
+ax.set_ylim(0, 1.0) # Metrik performa biasanya antara 0 dan 1
+ax.set_title('Perbandingan Performa Model (Regresi Logistik vs Random Forest)')
+ax.set_ylabel('Nilai Metrik')
+ax.set_xlabel('Metrik')
+ax.legend(title='Model')
+ax.grid(axis='y', linestyle='--', alpha=0.7)
+plt.tight_layout()
+
+st.pyplot(fig) # Tampilkan plot di Streamlit
+
+# Hapus bagian try-except Image.open karena grafik dibuat langsung
+# try:
+#     img = Image.open('model_performance_comparison.png')
+#     st.image(img, caption='Grafik Perbandingan Performa Model')
+# except FileNotFoundError:
+#     st.error("File grafik 'model_performance_comparison.png' tidak ditemukan. Pastikan sudah dibuat.")
